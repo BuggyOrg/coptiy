@@ -14,7 +14,7 @@ import * as _ from 'lodash'
 let ruleThreeCircles = Rewrite.applyPort(
   (node, port, graph) => {
     var type = Graph.get('copy-type', port, graph)
-    if (Graph.get('copy-as', port, graph) || port['copy-as']) {
+    if (port['rule_3_c']) {
       return false
     }
     if (type === '🞅') {
@@ -25,9 +25,11 @@ let ruleThreeCircles = Rewrite.applyPort(
     return false
   },
   (port, graph) => {
+    // console.log('ruleThreeCircles: replacing one')
     var node = Graph.node(port, graph)
     var newPort = _.assign(_.cloneDeep(port), {
-      'copy-as': 'ref'
+      'copy-as': 'ref',
+      'rule_3_c': true
     })
     graph = Rewrite.replacePort(node, port, newPort, graph)
     return Graph.set({'refs-to': Graph.successors(port, graph)}, port, graph)
@@ -43,16 +45,21 @@ let ruleThreeCircles = Rewrite.applyPort(
  */
 let ruleChain = Rewrite.applyPort(
   (node, port, graph) => {
-    var sucessors = Graph.successors(port, graph)
-    if (sucessors.lenght === 1) {
+    if (port['rule_chain']) {
+      return false
+    }
+
+    if (Graph.successors(port, graph).length === 1) {
       return port
     }
     return false
   },
   (port, graph) => {
+    // console.log('ruleChain: replacing one')
     var node = Graph.node(port, graph)
     var newPort = _.assign(_.cloneDeep(port), {
-      'copy-as': 'ref'
+      'copy-as': 'ref',
+      'rule_chain': true
     })
     graph = Rewrite.replacePort(node, port, newPort, graph)
     return Graph.set({'refs-to': Graph.successors(port, graph)}, port, graph)
@@ -80,8 +87,30 @@ let ruleChain = Rewrite.applyPort(
  *  copy ref
  *  🞏     🞏
  */
-// TODO
+let ruleTwo = Rewrite.applyPort(
+  (node, port, graph) => {
+    var sucessors = Graph.successors(port, graph)
+    if (port['rule_2'] || sucessors.length < 2) {
+      return false
+    }
+    if (sucessors.every((sn) => Graph.get('copy-type', sn, graph) === '🞅')) {
+      return false
+    }
+    return {port, sucessors}
+  },
+  (obj, graph) => {
+    console.log(obj)
+    var port = obj.port
+    var node = Graph.node(port, graph)
+    var newPort = _.assign(_.cloneDeep(port), {
+      'rule_2': true
+    })
+    graph = Rewrite.replacePort(node, port, newPort, graph)
+
+    return graph
+  }
+)
 
 export function addRefs (graph) {
-  return Rewrite.rewrite([ruleThreeCircles, ruleChain])(graph)
+  return Rewrite.rewrite([ruleThreeCircles, ruleChain, ruleTwo])(graph)
 }

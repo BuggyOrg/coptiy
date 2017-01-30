@@ -85,3 +85,45 @@ export function simple6 () {
     Graph.addEdge({ from: 'right2@out', to: 'merge@in' }),
   )()
 }
+
+export function chain5 () {
+  return Graph.flow(
+    Graph.addNode({
+      name: 'c0',
+      ports: [
+        { port: 'out', kind: 'output', type: 'generic' }
+      ]
+    }),
+    Graph.addNode({
+      name: 'c1',
+      ports: [
+        { port: 'in', kind: 'input', type: 'generic' },
+        { port: 'out', kind: 'output', type: 'generic' }
+      ]
+    }),
+    Graph.addNode({
+      name: 'c2',
+      ports: [
+        { port: 'in', kind: 'input', type: 'generic' },
+        { port: 'out', kind: 'output', type: 'generic' }
+      ]
+    }),
+    Graph.addNode({
+      name: 'c3',
+      ports: [
+        { port: 'in', kind: 'input', type: 'generic' },
+        { port: 'out', kind: 'output', type: 'generic' }
+      ]
+    }),
+    Graph.addNode({
+      name: 'c4',
+      ports: [
+        { port: 'in', kind: 'input', type: 'generic' }
+      ]
+    }),
+    Graph.addEdge({ from: 'c0@out', to: 'c1@in' }),
+    Graph.addEdge({ from: 'c1@out', to: 'c2@in' }),
+    Graph.addEdge({ from: 'c2@out', to: 'c3@in' }),
+    Graph.addEdge({ from: 'c3@out', to: 'c4@in' })
+  )()
+}

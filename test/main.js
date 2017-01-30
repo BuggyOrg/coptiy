@@ -10,6 +10,20 @@ const expect = chai.expect
 // RECTANGLE  = 🞏 = COPY
 // TRIANGLE   = ◭ = eg. IFs
 
+
+function expectRef (from, to, graph, at = 0) {
+  const refs = Graph.get('refs-to', from, graph)
+  expect(refs, 'Array refs-to should exist for ' + from).to.exist
+  expect(refs.length > at, 'refs-to array is to small').to.be.true
+  expect(Graph.node(refs[at], graph)).to.deep.equal(Graph.node(to, graph), 'Failed to find a ref')
+}
+
+function expectRefLength (to, length, graph) {
+  const ref = Graph.get('refs-to', to, graph)
+  expect(ref, 'Array refs-to should exist for ' + to).to.exist
+  expect(ref).to.have.length.of(length)
+}
+
 describe('TODO', () => {
   describe('TODO', () => {
     /**
@@ -19,7 +33,7 @@ describe('TODO', () => {
      *   ref ref
      *      🞅
      */
-    it.only('can detect and add refs', () => {
+    it('can detect and add refs', () => {
       var graph = graphs.simple4()
 
       graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
@@ -29,12 +43,57 @@ describe('TODO', () => {
 
       graph = api.addRefs(graph)
 
-      expect(Graph.get('refs-to', 'root', graph)).to.have.length.of(2)
-      expect(Graph.get('refs-to', 'left', graph)).to.have.length.of(1)
-      expect(Graph.get('refs-to', 'right', graph)).to.have.length.of(1)
+      expectRefLength('root', 2, graph)
+      expectRefLength('left', 1, graph)
+      expectRefLength('right', 1, graph)
+
+      expectRef('left', 'merge', graph)
+      expectRef('right', 'merge', graph)
+      expectRef('root', 'left', graph, 0)
+      expectRef('root', 'right', graph, 1)
     })
 
-    it('TODO', () => {
+    /**  is the same as
+     *   🞅           🞅
+     *  copy         ref
+     *   🞏           🞅
+     *  copy         ref
+     *   🞏           🞅
+     *  copy         ref
+     *   🞏           🞅
+     *  ref          ref
+     *   🞅           🞅
+     */
+    it('can detect chains', () => {
+      var graph = graphs.chain5()
+
+      graph = Graph.set({'copy-type': '🞅'}, 'c0', graph)
+      graph = Graph.set({'copy-type': '🞏'}, 'c1', graph)
+      graph = Graph.set({'copy-type': '🞏'}, 'c2', graph)
+      graph = Graph.set({'copy-type': '🞏'}, 'c3', graph)
+      graph = Graph.set({'copy-type': '🞅'}, 'c4', graph)
+
+      graph = api.addRefs(graph)
+
+      expectRefLength('c0', 1, graph)
+      expectRefLength('c1', 1, graph)
+      expectRefLength('c2', 1, graph)
+      expectRefLength('c3', 1, graph)
+
+      expectRef('c0', 'c1', graph)
+      expectRef('c1', 'c2', graph)
+      expectRef('c2', 'c3', graph)
+      expectRef('c3', 'c4', graph)
+    })
+
+    /**
+     *      🞅
+     *  copy copy   // only one copy is needed
+     *  🞏      🞏
+     *   ref ref
+     *      🞅
+     */
+    it.skip('can replace two copies to one ref', () => {
       var graph = graphs.simple4()
 
       graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
@@ -42,11 +101,11 @@ describe('TODO', () => {
       graph = Graph.set({'copy-type': '🞏'}, 'right', graph)
       graph = Graph.set({'copy-type': '🞅'}, 'merge', graph)
 
-      console.log(Graph.get('copy-as', 'root', graph))
-
       graph = api.addRefs(graph)
 
-      console.log(Graph.node('root', graph))
+      expectRefLength('root', 1, graph)
+      expectRefLength('left', 1, graph)
+      expectRefLength('right', 1, graph)
     })
 
     /**
@@ -56,7 +115,7 @@ describe('TODO', () => {
      *   ref ref        ref ref
      *      🞅             🞅
      */
-    it('TODO', () => {
+    it.skip('should be the same', () => {
       var graph = graphs.simple4()
       graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
       graph = Graph.set({'copy-type': '🞏'}, 'left', graph)
@@ -74,6 +133,21 @@ describe('TODO', () => {
 
       console.log(Graph.node('root', graph))
       console.log(Graph.node('root', graph2))
+    })
+
+    /**
+     *                🞅
+     *          copy       ref    // left or right side first?
+     *        🞏               🞅
+     *     ref  copy
+     *   🞏/🞅    🞏           ref
+     *     ref  ref
+     *        🞏               🞅
+     *            ref?    ref
+     *                🞅
+     */
+    it('TODO', () => {
+
     })
   })
 })
