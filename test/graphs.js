@@ -1,5 +1,32 @@
 import * as Graph from '@buggyorg/graphtools'
 
+export function simple3 () {
+  return Graph.flow(
+    Graph.addNode({
+      name: 'root',
+      ports: [
+        { port: 'out', kind: 'output', type: 'generic' }
+      ]
+    }),
+    Graph.addNode({
+      name: 'merge',
+      ports: [
+        { port: 'in', kind: 'input', type: 'generic' }
+      ]
+    }),
+    Graph.addNode({
+      name: 'left',
+      ports: [
+        { port: 'in', kind: 'input', type: 'generic' },
+        { port: 'out', kind: 'output', type: 'generic' }
+      ]
+    }),
+    Graph.addEdge({ from: 'root@out', to: 'left@in' }),
+    Graph.addEdge({ from: 'root@out', to: 'merge@in' }),
+    Graph.addEdge({ from: 'left@out', to: 'merge@in' })
+  )()
+}
+
 export function simple4 () {
   return Graph.flow(
     Graph.addNode({

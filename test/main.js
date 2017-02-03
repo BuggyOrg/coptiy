@@ -24,6 +24,19 @@ function expectRefLength (to, length, graph) {
   expect(ref).to.have.length.of(length)
 }
 
+function expectCopy (from, to, graph, at = 0) {
+  const copies = Graph.get('copies-to', from, graph)
+  expect(copies, 'Array copies-to should exist for ' + from).to.exist
+  expect(copies.length > at, 'copies-to array is to small').to.be.true
+  expect(Graph.node(copies[at], graph)).to.deep.equal(Graph.node(to, graph), 'Failed to find a ref')
+}
+
+function expectCopyLength (to, length, graph) {
+  const copies = Graph.get('copies-to', to, graph)
+  expect(copies, 'Array copies-to should exist for ' + to).to.exist
+  expect(copies).to.have.length.of(length)
+}
+
 describe('TODO', () => {
   describe('TODO', () => {
     /**
@@ -88,12 +101,12 @@ describe('TODO', () => {
 
     /**
      *      🞅
-     *  copy copy   // only one copy is needed
+     *  ref  copy   // only one copy is needed
      *  🞏      🞏
      *   ref ref
      *      🞅
      */
-    it.skip('can replace two copies to one ref', () => {
+    it('can replace two copies to one ref', () => {
       var graph = graphs.simple4()
 
       graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
@@ -103,36 +116,60 @@ describe('TODO', () => {
 
       graph = api.addRefs(graph)
 
-      expectRefLength('root', 1, graph)
       expectRefLength('left', 1, graph)
+      expectRef('left', 'merge', graph)
+
       expectRefLength('right', 1, graph)
+      expectRef('right', 'merge', graph)
+
+      expectRefLength('root', 1, graph)
+      expectRef('root', 'left', graph)
     })
 
     /**
-     *      🞅             🞏
-     *   ref copy       ref copy
-     *  🞏      🞏      🞅      🞏
-     *   ref ref        ref ref
-     *      🞅             🞅
+     *      🞏
+     *   ref copy
+     *  🞅      🞏
+     *   ref ref
+     *      🞅
      */
-    it.skip('should be the same', () => {
+    it('should create a simple copy', () => {
       var graph = graphs.simple4()
       graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
       graph = Graph.set({'copy-type': '🞏'}, 'left', graph)
-      graph = Graph.set({'copy-type': '🞏'}, 'right', graph)
+      graph = Graph.set({'copy-type': '🞅'}, 'right', graph)
       graph = Graph.set({'copy-type': '🞅'}, 'merge', graph)
       graph = api.addRefs(graph)
 
-      var graph2 = graphs.simple4()
-      graph2 = Graph.set({'copy-type': '🞅'}, 'root', graph2)
-      graph2 = Graph.set({'copy-type': '🞏'}, 'left', graph2)
-      graph2 = Graph.set({'copy-type': '🞅'}, 'right', graph2)
-      graph2 = Graph.set({'copy-type': '🞅'}, 'merge', graph2)
-      graph2 = api.addRefs(graph2)
+      expectRefLength('left', 1, graph)
+      expectRef('left', 'merge', graph)
 
+      expectRefLength('right', 1, graph)
+      expectRef('right', 'merge', graph)
+
+      expectRefLength('root', 1, graph)
+      expectRef('root', 'left', graph)
+
+      expectCopyLength('root', 1, graph)
+      expectCopy('root', 'right', graph)
+    })
+
+    /**
+     *      🞅
+     *   copy ref
+     *  🞏      |
+     *   ref   /
+     *       🞅
+     */
+    it.skip('TODO', () => {
+      var graph = graphs.simple3()
+      graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
+      graph = Graph.set({'copy-type': '🞏'}, 'left', graph)
+      graph = Graph.set({'copy-type': '🞅'}, 'merge', graph)
+
+      graph = api.addRefs(graph)
 
       console.log(Graph.node('root', graph))
-      console.log(Graph.node('root', graph2))
     })
 
     /**
@@ -146,7 +183,7 @@ describe('TODO', () => {
      *            ref?    ref
      *                🞅
      */
-    it('TODO', () => {
+    it.skip('TODO', () => {
 
     })
   })

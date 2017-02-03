@@ -99,14 +99,15 @@ let ruleTwo = Rewrite.applyPort(
     return {port, sucessors}
   },
   (obj, graph) => {
-    console.log(obj)
     var port = obj.port
     var node = Graph.node(port, graph)
     var newPort = _.assign(_.cloneDeep(port), {
-      'rule_2': true
+      'rule_2': true,
+      'copy-as': 'ref&copy'
     })
     graph = Rewrite.replacePort(node, port, newPort, graph)
-
+    graph = Graph.set({'refs-to': [ obj.sucessors[0] ]}, port, graph)
+    graph = Graph.set({'copies-to': obj.sucessors.slice(1)}, port, graph)
     return graph
   }
 )
