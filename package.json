@@ -29,7 +29,7 @@
     "standard": "^8.6.0"
   },
   "dependencies": {
-    "@buggyorg/graphtools": "^0.4.0-pre.15",
-    "@buggyorg/rewrite": "^0.2.4"
+    "@buggyorg/graphtools": "^0.4.0-pre.27",
+    "@buggyorg/rewrite": "^0.2.7"
   }
 }

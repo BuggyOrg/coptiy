@@ -12,7 +12,7 @@ import * as _ from 'lodash'
  *  🞅     🞅
  */
 let ruleThreeCircles = Rewrite.applyPort(
-  (node, port, graph) => {
+  (port, graph) => {
     var type = Graph.get('copy-type', port, graph)
     if (port['rule_3_c']) {
       return false
@@ -44,7 +44,7 @@ let ruleThreeCircles = Rewrite.applyPort(
  *  🞏
  */
 let ruleChain = Rewrite.applyPort(
-  (node, port, graph) => {
+  (port, graph) => {
     if (port['rule_chain']) {
       return false
     }
@@ -88,7 +88,7 @@ let ruleChain = Rewrite.applyPort(
  *  🞏     🞏
  */
 let ruleTwo = Rewrite.applyPort(
-  (node, port, graph) => {
+  (port, graph) => {
     var sucessors = Graph.successors(port, graph)
     if (port['rule_2'] || sucessors.length < 2) {
       return false
