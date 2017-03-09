@@ -27,12 +27,14 @@ let ruleThreeCircles = Rewrite.applyPort(
   (port, graph) => {
     // console.log('ruleThreeCircles: replacing one')
     var node = Graph.node(port, graph)
+    var refs = Graph.successors(port, graph)
     var newPort = _.assign(_.cloneDeep(port), {
       'copy-as': 'ref',
+      'refs-to': refs,
       'rule_3_c': true
     })
     graph = Rewrite.replacePort(node, port, newPort, graph)
-    return Graph.set({'refs-to': Graph.successors(port, graph)}, port, graph)
+    return Graph.set({'refs-to': refs}, port, graph)
   }
 )
 
@@ -57,12 +59,14 @@ let ruleChain = Rewrite.applyPort(
   (port, graph) => {
     // console.log('ruleChain: replacing one')
     var node = Graph.node(port, graph)
+    var refs = Graph.successors(port, graph)
     var newPort = _.assign(_.cloneDeep(port), {
       'copy-as': 'ref',
+      'refs-to': refs,
       'rule_chain': true
     })
     graph = Rewrite.replacePort(node, port, newPort, graph)
-    return Graph.set({'refs-to': Graph.successors(port, graph)}, port, graph)
+    return Graph.set({'refs-to': refs}, port, graph)
   }
 )
 
@@ -101,13 +105,17 @@ let ruleTwo = Rewrite.applyPort(
   (obj, graph) => {
     var port = obj.port
     var node = Graph.node(port, graph)
+    var refs = [ obj.sucessors[0] ]
+    var copies = obj.sucessors.slice(1)
     var newPort = _.assign(_.cloneDeep(port), {
       'rule_2': true,
-      'copy-as': 'ref&copy'
+      'copy-as': 'ref&copy',
+      'refs-to': refs,
+      'copies-to': copies
     })
     graph = Rewrite.replacePort(node, port, newPort, graph)
-    graph = Graph.set({'refs-to': [ obj.sucessors[0] ]}, port, graph)
-    graph = Graph.set({'copies-to': obj.sucessors.slice(1)}, port, graph)
+    graph = Graph.set({'refs-to': refs}, port, graph)
+    graph = Graph.set({'copies-to': copies}, port, graph)
     return graph
   }
 )

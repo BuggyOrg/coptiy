@@ -1,8 +1,9 @@
 /* global describe, it */
 import * as Graph from '@buggyorg/graphtools'
-import * as graphs from './graphs'
+import * as graphs from './graphs_e'
 import * as api from '../src/main.js'
 import chai from 'chai'
+import * as _ from 'lodash'
 
 const expect = chai.expect
 
@@ -10,35 +11,62 @@ const expect = chai.expect
 // RECTANGLE  = 🞏 = COPY
 // TRIANGLE   = ◭ = eg. IFs
 
+/**
+ * expection helper beginning
+ */
 
-function expectRef (from, to, graph, at = 0) {
-  const refs = Graph.get('refs-to', from, graph)
-  expect(refs, 'Array refs-to should exist for ' + from).to.exist
-  expect(refs.length > at, 'refs-to array is to small').to.be.true
-  expect(Graph.node(refs[at], graph)).to.deep.equal(Graph.node(to, graph), 'Failed to find a ref')
+function expectPort (from, to, graph, name) {
+  const node = Graph.node(from, graph)
+  const toNode = Graph.node(to, graph)
+  var found = node.ports.filter((p) => {
+    const ref = p[name]
+    if (ref) {
+      return ref.some((pp) => {
+        return _.isEqual(Graph.node(pp, graph), toNode)
+      })
+    }
+    return false
+  })
+  // NOTE: found.length == 1 or better >= 1?
+  expect(found, 'Failed to find a ' + name).to.have.length.of(1)
 }
 
-function expectRefLength (to, length, graph) {
-  const ref = Graph.get('refs-to', to, graph)
-  expect(ref, 'Array refs-to should exist for ' + to).to.exist
-  expect(ref).to.have.length.of(length)
+function expectPortLength (to, length, graph, name) {
+  const node = Graph.node(to, graph)
+
+  var found = node.ports.filter((p) => {
+    const ref = p[name]
+    if (ref && ref.length === length) {
+      return true
+    }
+    return false
+  })
+  // NOTE: found.length == 1 or better >= 1?
+  expect(found, 'Array ' + name + ' should exist inside one port').to.have.length.of(1)
 }
 
-function expectCopy (from, to, graph, at = 0) {
-  const copies = Graph.get('copies-to', from, graph)
-  expect(copies, 'Array copies-to should exist for ' + from).to.exist
-  expect(copies.length > at, 'copies-to array is to small').to.be.true
-  expect(Graph.node(copies[at], graph)).to.deep.equal(Graph.node(to, graph), 'Failed to find a ref')
+function expectPortRef (from, to, graph) {
+  return expectPort(from, to, graph, 'refs-to')
 }
 
-function expectCopyLength (to, length, graph) {
-  const copies = Graph.get('copies-to', to, graph)
-  expect(copies, 'Array copies-to should exist for ' + to).to.exist
-  expect(copies).to.have.length.of(length)
+function expectPortRefsLength (to, length, graph) {
+  expectPortLength(to, length, graph, 'refs-to')
 }
 
-describe('TODO', () => {
-  describe('TODO', () => {
+function expectPortCopy (from, to, graph) {
+  return expectPort(from, to, graph, 'copies-to')
+}
+
+function expectPortCopiesLength (to, length, graph) {
+  expectPortLength(to, length, graph, 'copies-to')
+}
+
+/**
+ * expection helper end
+ */
+
+describe('coptiy', () => {
+  describe('graph tests', () => {
     /**
      *      🞅
      *   ref ref
@@ -56,14 +84,14 @@ describe('TODO', () => {
 
       graph = api.addRefs(graph)
 
-      expectRefLength('root', 2, graph)
-      expectRefLength('left', 1, graph)
-      expectRefLength('right', 1, graph)
+      expectPortRefsLength('root', 2, graph)
+      expectPortRefsLength('left', 1, graph)
+      expectPortRefsLength('right', 1, graph)
 
-      expectRef('left', 'merge', graph)
-      expectRef('right', 'merge', graph)
-      expectRef('root', 'left', graph, 0)
-      expectRef('root', 'right', graph, 1)
+      expectPortRef('left', 'merge', graph)
+      expectPortRef('right', 'merge', graph)
+      expectPortRef('root', 'left', graph)
+      expectPortRef('root', 'right', graph)
     })
 
     /**  is the same as
@@ -88,15 +116,15 @@ describe('TODO', () => {
 
       graph = api.addRefs(graph)
 
-      expectRefLength('c0', 1, graph)
-      expectRefLength('c1', 1, graph)
-      expectRefLength('c2', 1, graph)
-      expectRefLength('c3', 1, graph)
+      expectPortRefsLength('c0', 1, graph)
+      expectPortRefsLength('c1', 1, graph)
+      expectPortRefsLength('c2', 1, graph)
+      expectPortRefsLength('c3', 1, graph)
 
-      expectRef('c0', 'c1', graph)
-      expectRef('c1', 'c2', graph)
-      expectRef('c2', 'c3', graph)
-      expectRef('c3', 'c4', graph)
+      expectPortRef('c0', 'c1', graph)
+      expectPortRef('c1', 'c2', graph)
+      expectPortRef('c2', 'c3', graph)
+      expectPortRef('c3', 'c4', graph)
     })
 
     /**
@@ -116,14 +144,14 @@ describe('TODO', () => {
 
       graph = api.addRefs(graph)
 
-      expectRefLength('left', 1, graph)
-      expectRef('left', 'merge', graph)
+      expectPortRefsLength('left', 1, graph)
+      expectPortRef('left', 'merge', graph)
 
-      expectRefLength('right', 1, graph)
-      expectRef('right', 'merge', graph)
+      expectPortRefsLength('right', 1, graph)
+      expectPortRef('right', 'merge', graph)
 
-      expectRefLength('root', 1, graph)
-      expectRef('root', 'left', graph)
+      expectPortRefsLength('root', 1, graph)
+      expectPortRef('root', 'left', graph)
     })
 
     /**
@@ -141,17 +169,17 @@ describe('TODO', () => {
       graph = Graph.set({'copy-type': '🞅'}, 'merge', graph)
       graph = api.addRefs(graph)
 
-      expectRefLength('left', 1, graph)
-      expectRef('left', 'merge', graph)
+      expectPortRefsLength('left', 1, graph)
+      expectPortRef('left', 'merge', graph)
 
-      expectRefLength('right', 1, graph)
-      expectRef('right', 'merge', graph)
+      expectPortRefsLength('right', 1, graph)
+      expectPortRef('right', 'merge', graph)
 
-      expectRefLength('root', 1, graph)
-      expectRef('root', 'left', graph)
+      expectPortRefsLength('root', 1, graph)
+      expectPortRef('root', 'left', graph)
 
-      expectCopyLength('root', 1, graph)
-      expectCopy('root', 'right', graph)
+      expectPortCopiesLength('root', 1, graph)
+      expectPortCopy('root', 'right', graph)
     })
 
     /**
@@ -161,7 +189,7 @@ describe('TODO', () => {
      *   ref   /
      *       🞅
      */
-    it.skip('TODO', () => {
+    it('should work with one long edge and one extra node', () => {
       var graph = graphs.simple3()
       graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
       graph = Graph.set({'copy-type': '🞏'}, 'left', graph)
@@ -169,7 +197,15 @@ describe('TODO', () => {
 
       graph = api.addRefs(graph)
 
-      console.log(Graph.node('root', graph))
+      expect(Graph.node('root', graph).ports).to.have.length(1) // one out
+      expect(Graph.node('left', graph).ports).to.have.length(2) // one in and one out
+      expect(Graph.node('merge', graph).ports).to.have.length(1) // one in
+
+      expectPortRefsLength('root', 1, graph)
+      expectPortCopiesLength('root', 1, graph)
+      expectPortRefsLength('left', 1, graph)
+
+      expectPortRef('left', 'merge', graph)
     })
 
     /**
