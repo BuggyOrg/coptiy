@@ -6,6 +6,7 @@ import * as _ from 'lodash'
 // RECTANGLE  = 🞏 = COPY
 // TRIANGLE   = ◭ = eg. IFs
 
+// First the old port rules
 /** Only cirlce sucessors
  *     🞅
  *  ref  ref
@@ -31,9 +32,9 @@ let ruleThreeCircles = Rewrite.applyPort(
       'copy-as': 'ref',
       'rule_3_c': true
     })
-    graph = Rewrite.replacePort(node, port, newPort, graph)
+    graph = Graph.replacePort(port, newPort, graph)
     return Graph.set({'refs-to': Graph.successors(port, graph)}, port, graph)
-  }
+  }, {noIsomorphCheck: true}
 )
 
 /** Chains with only one child/sucessor
@@ -61,9 +62,9 @@ let ruleChain = Rewrite.applyPort(
       'copy-as': 'ref',
       'rule_chain': true
     })
-    graph = Rewrite.replacePort(node, port, newPort, graph)
+    graph = Graph.replacePort(port, newPort, graph)
     return Graph.set({'refs-to': Graph.successors(port, graph)}, port, graph)
-  }
+  }, {noIsomorphCheck: true}
 )
 
 /**
@@ -105,13 +106,82 @@ let ruleTwo = Rewrite.applyPort(
       'rule_2': true,
       'copy-as': 'ref&copy'
     })
-    graph = Rewrite.replacePort(node, port, newPort, graph)
-    graph = Graph.set({'refs-to': [ obj.sucessors[0] ]}, port, graph)
+    graph = Graph.replacePort(port, newPort, graph)
+    graph = Graph.set({'refs-to': [ obj.sucessors[0]]}, port, graph)
     graph = Graph.set({'copies-to': obj.sucessors.slice(1)}, port, graph)
     return graph
-  }
+  }, {noIsomorphCheck: true}
 )
 
 export function addRefs (graph) {
   return Rewrite.rewrite([ruleThreeCircles, ruleChain, ruleTwo])(graph)
+}
+
+// New Node Rules start from here
+// CIRCLE     = 🞅 = REF
+// RECTANGLE  = 🞏 = COPY
+
+let dup = Graph.compound({
+  ref: 'DUP',
+  ports: [
+    {port: 'in', kind: 'input', type: 'generic'},
+    {port: 'out0', kind: 'output', type: 'generic'},
+  {port: 'out1', kind: 'output', type: 'generic'}]})
+
+/**
+ * From:
+ *   A
+ * B   C
+ * To:
+ *    A
+ *   DUP
+ *  B   C
+ */
+let simpleDupRule = Rewrite.applyPort(
+  (port, graph) => Graph.successors(port, graph).length > 1,
+  (port, graph) => {
+    const succ = Graph.successors(port, graph).slice(0, 2)
+    return Graph.flow(
+      succ.map((s) => Graph.removeEdge(Graph.inIncident(s, graph))),
+      Graph.Let(Graph.addNode(dup), (dupNode, graph) => Graph.flow(
+        Graph.addEdge({from: port, to: {node: dupNode.id, port: 'in'}}),
+        succ.map((s, idx) => Graph.addEdge({from: {node: dupNode.id, port: 'out' + idx}, to: s}))
+      )(graph)
+      ))(graph)
+  },
+  {noIsomorphCheck: true}
+)
+
+// change a DUP to a DUPREF if both successors are refs 
+let setDupRefRule = Rewrite.applyNode(
+  (node, graph) => node.ref === 'DUP' &&
+    Graph.successors(node, graph).every((sn) => Graph.get('copy-type', sn, graph) === '🞅'),
+  (node, graph) => {
+    let newNode = node
+    newNode.ref = 'DUPREF'
+    return Graph.replaceNode(node, newNode, graph)
+  },
+  {noIsomorphCheck: true}
+)
+
+let setDupRefSeqRule = Rewrite.applyNode(
+  (node, graph) => {
+    let succ = Graph.successors(node, graph)
+    return node.ref === 'DUP' &&
+      succ.some((sn) => Graph.get('copy-type', sn, graph) === '🞅') &&
+      succ.some((sn) => Graph.get('copy-type', sn, graph) === '🞏')
+  },
+  (node, graph) => {
+    let newNode = node
+    newNode.ref = 'DUPSEQ'
+    // TODO:
+    //  set out0 for 🞅 Node (1st)
+    //  set out1 for 🞏 Node (2nd)
+    return Graph.replaceNode(node, newNode, graph)
+  },
+  {noIsomorphCheck: true}
+)
+
+export function addNodes (graph) {
+  return Rewrite.rewrite([simpleDupRule, setDupRefRule, setDupRefSeqRule])(graph)
 }

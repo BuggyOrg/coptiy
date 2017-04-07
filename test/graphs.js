@@ -11,7 +11,8 @@ export function simple3 () {
     Graph.addNode({
       name: 'merge',
       ports: [
-        { port: 'in', kind: 'input', type: 'generic' }
+        { port: 'in0', kind: 'input', type: 'generic' },
+        { port: 'in1', kind: 'input', type: 'generic' }
       ]
     }),
     Graph.addNode({
@@ -22,8 +23,8 @@ export function simple3 () {
       ]
     }),
     Graph.addEdge({ from: 'root@out', to: 'left@in' }),
-    Graph.addEdge({ from: 'root@out', to: 'merge@in' }),
-    Graph.addEdge({ from: 'left@out', to: 'merge@in' })
+    Graph.addEdge({ from: 'root@out', to: 'merge@in0' }),
+    Graph.addEdge({ from: 'left@out', to: 'merge@in1' })
   )()
 }
 
@@ -38,7 +39,8 @@ export function simple4 () {
     Graph.addNode({
       name: 'merge',
       ports: [
-        { port: 'in', kind: 'input', type: 'generic' }
+        { port: 'in0', kind: 'input', type: 'generic' },
+        { port: 'in1', kind: 'input', type: 'generic' }
       ]
     }),
     Graph.addNode({
@@ -57,8 +59,8 @@ export function simple4 () {
     }),
     Graph.addEdge({ from: 'root@out', to: 'left@in' }),
     Graph.addEdge({ from: 'root@out', to: 'right@in' }),
-    Graph.addEdge({ from: 'left@out', to: 'merge@in' }),
-    Graph.addEdge({ from: 'right@out', to: 'merge@in' }),
+    Graph.addEdge({ from: 'left@out', to: 'merge@in0' }),
+    Graph.addEdge({ from: 'right@out', to: 'merge@in1' }),
   )()
 }
 

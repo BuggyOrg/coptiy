@@ -1,6 +1,6 @@
 /* global describe, it */
 import * as Graph from '@buggyorg/graphtools'
-import * as graphs from './graphs'
+import * as graphs from './graphs.js'
 import * as api from '../src/main.js'
 import chai from 'chai'
 
@@ -37,8 +37,16 @@ function expectCopyLength (to, length, graph) {
   expect(copies).to.have.length.of(length)
 }
 
+const expectEdge = function (from, to, graph) {
+  expect(Graph.hasEdge({from: from, to: to}, graph), 'Expected an edge from ' + from + ' to ' + to).to.be.true
+}
+
+const expectNoEdge = function (from, to, graph) {
+  expect(Graph.hasEdge({from: from, to: to}, graph), 'Expected NO edge from ' + from + ' to ' + to).to.be.false
+}
+
 describe('TODO', () => {
-  describe('TODO', () => {
+  describe('addRefs (old)', () => {
     /**
      *      🞅
      *   ref ref
@@ -185,6 +193,137 @@ describe('TODO', () => {
      */
     it.skip('TODO', () => {
 
+    })
+  })
+
+  describe('addNodes (new)', () => {
+    /**
+     *      🞅          root
+     *   ref ref      /     \
+     *  🞅      🞅  left    right
+     *   ref ref      \     /
+     *      🞅          merge
+     */
+    it('can detect and add refs with new node', () => {
+      var graph = graphs.simple4()
+
+      graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
+      graph = Graph.set({'copy-type': '🞅'}, 'left', graph)
+      graph = Graph.set({'copy-type': '🞅'}, 'right', graph)
+      graph = Graph.set({'copy-type': '🞅'}, 'merge', graph)
+
+      expectEdge('root@out', 'left@in', graph)
+      expectEdge('root@out', 'right@in', graph)
+
+      expect(Graph.nodes(graph)).to.have.length(4)
+      graph = api.addNodes(graph)
+
+      expectNoEdge('root', 'left', graph)
+      expectNoEdge('root', 'right', graph)
+      expectNoEdge('root@out', 'left@in', graph)
+      expectNoEdge('root@out', 'right@in', graph)
+
+      expectEdge('root@out', '/DUPREF@in', graph)
+      expectEdge('/DUPREF@out0', 'left@in', graph)
+      expectEdge('/DUPREF@out1', 'right@in', graph)
+
+      expect(Graph.node('root', graph)).exists
+      expect(Graph.node('/DUPREF', graph)).exists
+      expect(Graph.node('left', graph)).exists
+      expect(Graph.node('right', graph)).exists
+      expect(Graph.node('merge', graph)).exists
+      expect(Graph.nodes(graph)).to.have.length(5)
+    })
+
+    /**
+     * FROM:
+     *        root
+     *     /    |    \
+     * left  middle  right
+     *     \    |    /
+     *        merge
+     * TO:
+     *        root
+     *          |
+     *        DUP
+     *       /    \
+     *     DUP      right
+     *    /   \      |
+     * left  middle  |
+     *     \    |   /
+     *        merge
+     */
+    it('can detect and add refs with one node with 3 successors', () => {
+      var graph3 = Graph.flow(
+        Graph.addNode({
+          name: 'root',
+          ports: [
+            { port: 'out', kind: 'output', type: 'generic' }
+          ]
+        }),
+        Graph.addNode({
+          name: 'merge',
+          ports: [
+            { port: 'in0', kind: 'input', type: 'generic' },
+            { port: 'in1', kind: 'input', type: 'generic' },
+            { port: 'in2', kind: 'input', type: 'generic' }
+          ]
+        }),
+        Graph.addNode({
+          name: 'left',
+          ports: [
+            { port: 'in', kind: 'input', type: 'generic' },
+            { port: 'out', kind: 'output', type: 'generic' }
+          ]
+        }),
+        Graph.addNode({
+          name: 'middle',
+          ports: [
+            { port: 'in', kind: 'input', type: 'generic' },
+            { port: 'out', kind: 'output', type: 'generic' }
+          ]
+        }),
+        Graph.addNode({
+          name: 'right',
+          ports: [
+            { port: 'in', kind: 'input', type: 'generic' },
+            { port: 'out', kind: 'output', type: 'generic' }
+          ]
+        }),
+        Graph.addEdge({ from: 'root@out', to: 'left@in' }),
+        Graph.addEdge({ from: 'root@out', to: 'middle@in' }),
+        Graph.addEdge({ from: 'root@out', to: 'right@in' }),
+        Graph.addEdge({ from: 'left@out', to: 'merge@in0' }),
+        Graph.addEdge({ from: 'middle@out', to: 'merge@in1' }),
+        Graph.addEdge({ from: 'right@out', to: 'merge@in2' }),
+      )()
+      Graph.debug(graph3)
+      expect(Graph.nodes(graph3)).to.have.length(5)
+      var graph = api.addNodes(graph3)
+      Graph.debug(graph)
+      expectNoEdge('root', 'left', graph)
+      expectNoEdge('root', 'right', graph)
+      expectNoEdge('root@out', 'left@in', graph)
+      expectNoEdge('root@out', 'right@in', graph)
+      // first DUP
+      expectEdge('root@out', '/DUP@in', graph)
+      expectEdge('/DUP@out0', 'right@in', graph)
+      expectEdge('/DUP@out1', '/DUP@in', graph)
+      // second DUP
+      expectEdge('/DUP@out0', 'left@in', graph)
+      expectEdge('/DUP@out1', 'middle@in', graph)
+
+      expectEdge('left@out', 'merge@in0', graph)
+      expectEdge('middle@out', 'merge@in1', graph)
+      expectEdge('right@out', 'merge@in2', graph)
+
+      expect(Graph.node('root', graph)).exists
+      expect(Graph.node('/DUP', graph)).exists
+      expect(Graph.node('left', graph)).exists
+      expect(Graph.node('right', graph)).exists
+      expect(Graph.node('middle', graph)).exists
+      expect(Graph.node('merge', graph)).exists
+      expect(Graph.nodes(graph)).to.have.length(7) // 2x DUP
     })
   })
 })
