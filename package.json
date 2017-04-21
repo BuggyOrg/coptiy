@@ -2,8 +2,14 @@
   "name": "coptiy",
   "version": "0.0.1",
   "description": "Also known as max referencly and min copies. Remove all unnecessary data copies.",
-  "main": "index.js",
+  "main": "lib/api.js",
+  "bin": {
+    "coptiy": "./lib/cli.js"
+  },
   "scripts": {
+    "build": "babel src -d lib",
+    "pretest": "npm run build",
+    "prepublish": "npm run build",
     "test": "dot-only-hunter && nyc mocha --compilers js:babel-register --recursive && standard src/**/*.js",
     "test:dev": "nyc mocha --compilers js:babel-register --recursive && standard src/**/*.js",
     "report": "nyc report",
@@ -45,6 +51,8 @@
   },
   "dependencies": {
     "@buggyorg/graphtools": "^0.4.0-pre.31",
-    "@buggyorg/rewrite": "^0.2.7"
+    "@buggyorg/rewrite": "^0.2.7",
+    "cli-ext": "^1.1.0",
+    "yargs": "^7.1.0"
   }
 }
