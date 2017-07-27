@@ -150,9 +150,9 @@ let simpleDupRule = Rewrite.applyPort(
 // change a DUP to a DUPREF if both successors are refs
 let setDupRefRule = Rewrite.applyNode(
   (node, graph) => node.ref === 'DUP' &&
-    Graph.successors(node, graph).every((sn) => Graph.get('copy-type', sn, graph) === '🞅'),
+    Graph.successors(node, graph).every((sn) => Graph.get('copy-type', sn, graph) === '🞅') && node
+    ,
   (node, graph) => {
-    console.log(node, graph)
     let newNode = node
     newNode.ref = 'DUPREF'
     return Graph.replaceNode(node, newNode, graph)
@@ -178,8 +178,12 @@ let setDupRefSeqRule = Rewrite.applyNode(
   {noIsomorphCheck: true}
 )
 
-export function executeForPairs (from, to, call, init) {
-  return from.reduce((graphA, a) => to.reduce((graphB, b) => call(a, b, graphB), graphA), init)
+export function executeForPairs (fromD, toD, call, init) {
+  if (!init || !call || !toD || !fromD) {
+    console.error('executeForPairs with a null value')
+    return []
+  }
+  return fromD.reduce((graphA, a) => toD.reduce((graphB, b) => call(a, b, graphB), graphA), init)
 }
 
 let addSeqNodes = Rewrite.applyNode(
@@ -187,11 +191,18 @@ let addSeqNodes = Rewrite.applyNode(
     let succ = Graph.successors(node, graph)
     let refs = succ.filter(a => Graph.get('copy-type', a, graph) === '🞅')
     let copies = succ.filter(a => Graph.get('copy-type', a, graph) === '🞏')
-    // console.log('A', refs.length, copies.length, Graph.successors(refs[0], graph).some(b => b === copies[0]))
-    return refs.length > 0 && copies.length > 0 && !Graph.successors(refs[0], graph).some(b => Graph.node(b, graph) === copies[0]) && {node, refs, copies}
+    return refs.length > 0 &&
+      copies.length > 0 &&
+      // TODO: check refs and copies?
+      !Graph.successors(refs[0], graph, {layers: ['sequence']}).some(b => b === copies[0].node) &&
+      {node, refs, copies}
   },
   ({node, refs, copies}, graph) => {
-    return executeForPairs(refs, copies, (a, b, g) => Graph.addEdge({from: a.id, to: b.id, layer: 'sequence'}, graph))
+    return executeForPairs(
+      refs, copies,
+      (a, b, g) => {
+        return Graph.addEdge({from: a.node, to: b.node, layer: 'sequence'}, graph)
+      }, graph)
   },
   { noIsomorphCheck: true }
 )

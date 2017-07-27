@@ -245,7 +245,7 @@ describe('TODO', () => {
      *                                \   /            \   /
      *                                merge            merge
      */
-    it.skip('can change the ndoe DUP to DUPREF', () => {
+    it('can change the node DUP to DUPREF', () => {
       var graph = graphs.simple4()
 
       graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
@@ -264,18 +264,17 @@ describe('TODO', () => {
       expectNoEdge('root@out', 'left@in', graph)
       expectNoEdge('root@out', 'right@in', graph)
 
-      expectEdge('root@out', '/DUP@in', graph)
-      expectEdge('/DUP@out0', 'left@in', graph)
-      expectEdge('/DUP@out1', 'right@in', graph)
+      expectEdge('root@out', '/DUPREF@in', graph)
+      expectEdge('/DUPREF@out0', 'left@in', graph)
+      expectEdge('/DUPREF@out1', 'right@in', graph)
 
       expect(Graph.node('root', graph)).exists
-      expect(Graph.node('/DUP', graph)).exists
+      expect(Graph.node('/DUPREF', graph)).exists
       expect(Graph.node('left', graph)).exists
       expect(Graph.node('right', graph)).exists
       expect(Graph.node('merge', graph)).exists
       expect(Graph.nodes(graph)).to.have.length(5)
     })
-
 
     /**
      *      🞅          root
@@ -284,7 +283,7 @@ describe('TODO', () => {
      *   ref ref      \     /
      *      🞅          merge
      */
-    it.skip('can add sequence edges', () => {
+    it('can add sequence edges', () => {
       var graph = graphs.simple4()
 
       graph = Graph.set({'copy-type': '🞅'}, 'root', graph)
@@ -296,7 +295,7 @@ describe('TODO', () => {
       expectEdge('root@out', 'right@in', graph)
 
       expect(Graph.nodes(graph)).to.have.length(4)
-      graph = api.addNodes(graph)
+      graph = api.addNodes(graph, {dup: true, dupRef: true, seq: true})
       Graph.debug(graph)
 
       expectNoEdge('root', 'left', graph)
@@ -305,17 +304,24 @@ describe('TODO', () => {
       expectNoEdge('root@out', 'right@in', graph)
 
       expect(Graph.node('root', graph)).exists
-      expect(Graph.node('/DUPSEQ', graph)).exists
+      expect(Graph.node('/DUP', graph)).exists
       expect(Graph.node('left', graph)).exists
       expect(Graph.node('right', graph)).exists
       expect(Graph.node('merge', graph)).exists
       expect(Graph.nodes(graph)).to.have.length(5)
 
-      expectEdge('root@out', '/DUPSEQ@in', graph)
-      expectEdge('/DUPSEQ@out0', 'left@in', graph)
-      expectEdge('/DUPSEQ@out1', 'right@in', graph)
-      console.log(JSON.stringify(Graph.toJSON(graph).edges, null, 1))
+      expectEdge('root@out', '/DUP@in', graph)
+      expectEdge('/DUP@out0', 'left@in', graph)
+      expectEdge('/DUP@out1', 'right@in', graph)
       expect(Graph.edges(graph)).to.have.length(6)
+
+      expect(Graph.successors(
+        Graph.node('left', graph), graph, {layers: ['dataflow']}).some(
+          b => Graph.node(b, graph) === Graph.node('right', graph))).to.be.false
+
+      expect(Graph.successors(
+        Graph.node('left', graph), graph, {layers: ['sequence']}).some(
+          b => Graph.node(b, graph) === Graph.node('right', graph))).to.be.true
     })
 
     it.skip('Extra function test', () => {
@@ -332,35 +338,6 @@ describe('TODO', () => {
       console.log(JSON.stringify(o, null, 0))
     })
 
-    // TODO: update graphtools to allow layers
-    it.skip('Add one sequence dummy edge', () => {
-      var graph = graphs.simple4()
-      var graphAfter = api.executeForPairs(
-        [Graph.node('left', graph)],
-        [Graph.node('right', graph)],
-        (a, b, g) => Graph.addEdge({from: a.id, to: b.id, layer: 'sequence'}, g), graph)
-
-      var edges = Graph.edges(graph)
-      var edgesAfter = Graph.edges(graphAfter)
-
-      expect(edges).to.have.length(4)
-      expect(edgesAfter).to.have.length(edges.length + 1)
-
-      let succ = Graph.successors('left', graph)
-      let succAfter = Graph.successors('left', graphAfter, {layers: ['dataflow', 'sequence']})
-
-      expect(succ).to.have.length(1)
-      expect(succAfter).to.have.length(succ.length + 1)
-      expect(succ.some(e => Graph.node(e, graph).id === Graph.node('right', graph).id)).to.be.false
-      expect(succAfter.some(e => Graph.node(e, graph).id === Graph.node('right', graph).id)).to.be.true
-
-      expect(Graph.successors(
-        Graph.node('left', graph), graph, {layers: ['dataflow', 'sequence']}).some(
-          b => Graph.node(b, graph) === Graph.node('right', graph))).to.be.false
-      expect(Graph.successors(
-        Graph.node('left', graphAfter), graphAfter, {layers: ['dataflow', 'sequence']}).some(
-          b => Graph.node(b, graphAfter) === Graph.node('right', graphAfter))).to.be.true
-    })
     /**
      * FROM:
      *        root
@@ -450,6 +427,37 @@ describe('TODO', () => {
       expect(Graph.node('middle', graph)).exists
       expect(Graph.node('merge', graph)).exists
       expect(Graph.nodes(graph)).to.have.length(7) // 2x DUP
+    })
+  })
+
+  describe('Basic utils (graphtool) tests', () => {
+    it('Add one sequence edge from left to right', () => {
+      var graph = graphs.simple4()
+      var graphAfter = api.executeForPairs(
+        [Graph.node('left', graph)],
+        [Graph.node('right', graph)],
+        (a, b, g) => Graph.addEdge({from: a.id, to: b.id, layer: 'sequence'}, g), graph)
+
+      var edges = Graph.edges(graph)
+      var edgesAfter = Graph.edges(graphAfter)
+
+      expect(edges).to.have.length(4)
+      expect(edgesAfter).to.have.length(edges.length + 1)
+
+      let succ = Graph.successors('left', graph)
+      let succAfter = Graph.successors('left', graphAfter, {layers: ['dataflow', 'sequence']})
+
+      expect(succ).to.have.length(1)
+      expect(succAfter).to.have.length(succ.length + 1)
+      expect(succ.some(e => Graph.node(e, graph).id === Graph.node('right', graph).id)).to.be.false
+      expect(succAfter.some(e => Graph.node(e, graph).id === Graph.node('right', graph).id)).to.be.true
+
+      expect(Graph.successors(
+        Graph.node('left', graph), graph, {layers: ['dataflow', 'sequence']}).some(
+          b => Graph.node(b, graph) === Graph.node('right', graph))).to.be.false
+      expect(Graph.successors(
+        Graph.node('left', graphAfter), graphAfter, {layers: ['dataflow', 'sequence']}).some(
+          b => Graph.node(b, graphAfter) === Graph.node('right', graphAfter))).to.be.true
     })
   })
 })
