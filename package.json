@@ -10,8 +10,8 @@
     "build": "babel src -d lib",
     "pretest": "npm run build",
     "prepublish": "npm run build",
-    "test": "dot-only-hunter && nyc mocha --compilers js:babel-register --recursive && standard src/**/*.js",
-    "test:dev": "nyc mocha --compilers js:babel-register --recursive && standard src/**/*.js",
+    "test": "dot-only-hunter && nyc mocha --compilers js:babel-register --recursive --timeout 10000 && standard src/**/*.js",
+    "test:dev": "nyc mocha --compilers js:babel-register --recursive --timeout 10000 && standard src/**/*.js",
     "report": "nyc report",
     "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
@@ -37,7 +37,6 @@
   },
   "homepage": "https://github.com/BuggyOrg/coptiy#readme",
   "devDependencies": {
-    "@buggyorg/rewrite": "^0.2.4",
     "babel-cli": "^6.18.0",
     "babel-preset-es2015": "^6.18.0",
     "babel-register": "^6.18.0",
@@ -53,6 +52,7 @@
     "@buggyorg/graphtools": "^0.4.0-pre.31",
     "@buggyorg/rewrite": "^0.2.7",
     "cli-ext": "^1.1.0",
+    "event-stream": "^3.3.4",
     "yargs": "^7.1.0"
   }
 }

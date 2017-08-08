@@ -116,8 +116,9 @@ export function addRefs (graph) {
 // CIRCLE     = 🞅 = REF
 // RECTANGLE  = 🞏 = COPY
 
-let dup = Graph.compound({
-  ref: 'DUP',
+const dup = Graph.compound({
+  componentId: 'DUP',
+  atomic: true,
   ports: [
     {port: 'in', kind: 'input', type: 'generic'},
     {port: 'out0', kind: 'output', type: 'generic'},
@@ -136,25 +137,32 @@ let simpleDupRule = Rewrite.applyPort(
   (port, graph) => Graph.successors(port, graph).length > 1 && port,
   (port, graph) => {
     const succ = Graph.successors(port, graph).slice(0, 2)
-    return Graph.flow(
+    let newNodeFn
+    if (port.kind === 'input') {
+      newNodeFn = Graph.addNodeIn(port.node, dup)
+    } else {
+      newNodeFn = Graph.addNode(dup)
+    }
+    const res = Graph.flow(
       succ.map((s) => Graph.removeEdge(Graph.inIncident(s, graph))),
-      Graph.Let(Graph.addNode(dup), (dupNode, graph) => Graph.flow(
+      Graph.Let(newNodeFn, (dupNode, graph) => Graph.flow(
         Graph.addEdge({from: port, to: {node: dupNode.id, port: 'in'}}),
         succ.map((s, idx) => Graph.addEdge({from: {node: dupNode.id, port: 'out' + idx}, to: s}))
       )(graph)
       ))(graph)
+    return res
   },
   {noIsomorphCheck: true}
 )
 
 // change a DUP to a DUPREF if both successors are refs
 let setDupRefRule = Rewrite.applyNode(
-  (node, graph) => node.ref === 'DUP' &&
+  (node, graph) => node.componentId === 'DUP' &&
     Graph.successors(node, graph).every((sn) => Graph.get('copy-type', sn, graph) === '🞅') && node
     ,
   (node, graph) => {
     let newNode = node
-    newNode.ref = 'DUPREF'
+    newNode.componentId = 'DUPREF'
     return Graph.replaceNode(node, newNode, graph)
   },
   {noIsomorphCheck: true}
@@ -163,13 +171,13 @@ let setDupRefRule = Rewrite.applyNode(
 let setDupRefSeqRule = Rewrite.applyNode(
   (node, graph) => {
     let succ = Graph.successors(node, graph)
-    return node.ref === 'DUP' &&
+    return node.componentId === 'DUP' &&
       succ.some((sn) => Graph.get('copy-type', sn, graph) === '🞅') &&
       succ.some((sn) => Graph.get('copy-type', sn, graph) === '🞏')
   },
   (node, graph) => {
     let newNode = node
-    newNode.ref = 'DUPSEQ'
+    newNode.componentId = 'DUPSEQ'
     // TODO:
     //  set out0 for 🞅 Node (1st)
     //  set out1 for 🞏 Node (2nd)

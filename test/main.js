@@ -428,6 +428,63 @@ describe('TODO', () => {
       expect(Graph.node('merge', graph)).exists
       expect(Graph.nodes(graph)).to.have.length(7) // 2x DUP
     })
+
+    it('can work with input ports', () => {
+      var impl = Graph.flow(
+        Graph.addNode({name: 'a',
+          ports: [
+            {port: 'out', kind: 'output', type: 'number'},
+            {port: 'in', kind: 'input', type: 'number'}],
+          atomic: true}),
+        Graph.addNode({name: 'b', ports: [{port: 'in', kind: 'input', type: 'number'}], atomic: true}),
+        Graph.addNode({name: 'c', ports: [{port: 'in', kind: 'input', type: 'number'}], atomic: true}),
+        Graph.addEdge({from: 'a@out', to: 'b@in'}),
+      )(Graph.compound({name: 'cc',
+        ports: [
+          {port: 'in', kind: 'input', type: 'string'},
+          {port: 'out', kind: 'output', type: 'string'}]}))
+
+      var graph = Graph.flow(
+        Graph.addNode(impl),
+        Graph.addEdge({from: '»cc@in', to: '»cc»a@in'}),
+        Graph.addEdge({from: '»cc@in', to: '»cc»c@in'})
+      )()
+
+      let newGraph = api.addNodes(graph, {dup: true})
+
+      expectEdge('»cc@in', '/DUP@in', newGraph)
+      expectEdge('/DUP@out0', '»cc»a@in', newGraph)
+      expectEdge('/DUP@out1', '»cc»c@in', newGraph)
+      expectNoEdge('»cc@in', '»cc»a@in', newGraph)
+      expectNoEdge('»cc@in', '»cc»c@in', newGraph)
+    })
+
+    it.skip('can work with input to output ports (wip)', () => {
+      var impl = Graph.flow(
+        Graph.addNode({name: 'a',
+          ports: [
+            {port: 'in', kind: 'input', type: 'number'},
+            {port: 'out', kind: 'output', type: 'number'}],
+          atomic: true})
+      )(Graph.compound({name: 'cc',
+        ports: [
+          {port: 'in', kind: 'input', type: 'string'},
+          {port: 'outA', kind: 'output', type: 'string'},
+          {port: 'outB', kind: 'output', type: 'string'},
+          {port: 'outC', kind: 'output', type: 'string'}]}))
+
+      var graph = Graph.flow(
+        Graph.addNode(impl),
+        Graph.addEdge({from: '»cc@in', to: '»cc»a@in'}),
+        Graph.addEdge({from: '»cc@in', to: '»cc@outA'}),
+        Graph.addEdge({from: '»cc@in', to: '»cc@outB'}),
+        Graph.addEdge({from: '»cc»a@out', to: '»cc@outC'})
+      )()
+
+      Graph.debug(graph)
+      let newGraph = api.addNodes(graph, {dup: true})
+      Graph.debug(newGraph)
+    })
   })
 
   describe('Basic utils (graphtool) tests', () => {
